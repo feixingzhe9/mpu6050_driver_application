@@ -8,4 +8,5 @@ sudo rmmod mpu6050_module
 sudo insmod mpu6050_module.ko
 sudo chmod 777 /dev/mpu60500
 
+make clean
 

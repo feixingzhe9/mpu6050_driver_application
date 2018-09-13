@@ -15,5 +15,7 @@ modules:
 clean distclean:
 	rm -f *.o *.mod.c .*.*.cmd *.ko
 	rm -rf .tmp_versions
+	rm modules.order
+	rm Module.symvers
     
 endif

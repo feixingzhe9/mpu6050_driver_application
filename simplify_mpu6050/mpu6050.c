@@ -67,6 +67,7 @@ static void mpu6050_write_byte(struct i2c_client *client,const unsigned char reg
     };
     i2c_transfer(client->adapter, msg, ARRAY_SIZE(msg));
 }
+
 static char mpu6050_read_byte(struct i2c_client *client,const unsigned char reg)
 {
     char txbuf[1] = {reg};
@@ -90,57 +91,43 @@ static char mpu6050_read_byte(struct i2c_client *client,const unsigned char reg)
     //printk("i2c read result: %d",rxbuf[0]);
     return rxbuf[0];
 }
+
 static int dev_open(struct inode *ip, struct file *fp)
 {
     return 0;
 }
+
 static int dev_release(struct inode *ip, struct file *fp)
 {
     return 0;
 }
+
 static long dev_ioctl(struct file *fp, unsigned int cmd, unsigned long arg)
 {
     int res = 0;
-    uint8_t addr = cmd & 0xff;
-    uint8_t value = mpu6050_read_byte(dev.client,addr);
-    res = copy_to_user((void *)arg,&value,sizeof(value));
-    printk("addr:%d, value:%d", addr, value);
-    return sizeof(value);
-
-    //union mpu6050_data data = {{0}};
-//    switch(cmd){
-//        case GET_ACCEL:
-//            data.accel.x = mpu6050_read_byte(dev.client,ACCEL_XOUT_L);
-//            data.accel.x|= mpu6050_read_byte(dev.client,ACCEL_XOUT_H)<<8;
-//            data.accel.y = mpu6050_read_byte(dev.client,ACCEL_YOUT_L);
-//            data.accel.y|= mpu6050_read_byte(dev.client,ACCEL_YOUT_H)<<8;
-//            data.accel.z = mpu6050_read_byte(dev.client,ACCEL_ZOUT_L);
-//            data.accel.z|= mpu6050_read_byte(dev.client,ACCEL_ZOUT_H)<<8;
-//            break;
-//        case GET_GYRO:
-//            data.gyro.x = mpu6050_read_byte(dev.client,GYRO_XOUT_L);
-//            data.gyro.x|= mpu6050_read_byte(dev.client,GYRO_XOUT_H)<<8;
-//            data.gyro.y = mpu6050_read_byte(dev.client,GYRO_YOUT_L);
-//            data.gyro.y|= mpu6050_read_byte(dev.client,GYRO_YOUT_H)<<8;
-//            data.gyro.z = mpu6050_read_byte(dev.client,GYRO_ZOUT_L);
-//            data.gyro.z|= mpu6050_read_byte(dev.client,GYRO_ZOUT_H)<<8;
-//            printk("gyro:x %d, y:%d, z:%d\n",data.gyro.x,data.gyro.y,data.gyro.z);
-//            break;
-//        case GET_TEMP:
-//            data.temp = mpu6050_read_byte(dev.client,TEMP_OUT_L);
-//            data.temp|= mpu6050_read_byte(dev.client,TEMP_OUT_H)<<8;
-//            printk("temp: %d\n",data.temp);
-//            break;
-//        default:
-//            printk(KERN_INFO "invalid cmd");
-//            break;
-//    }
-//    printk("acc:x %d, y:%d, z:%d\n",data.accel.x,data.accel.y,data.accel.z);
-//    res = copy_to_user((void *)arg,&data,sizeof(data));
-//    return sizeof(data);
-
-    
+    unsigned char addr = cmd & 0xff;
+    uint32_t w_r = cmd & 0x80000000;
+    uint8_t value;
+    uint8_t write_value = 0;
+    printk("cmd: 0x%x", cmd);
+    printk("w_r: 0x%x", w_r);
+    if(w_r == 0)
+    {
+        value = mpu6050_read_byte(dev.client,addr);
+        res = copy_to_user((void *)arg,&value,sizeof(value));
+        return sizeof(value);
     }
+    else
+    {
+        write_value = *(unsigned char *)arg;
+        printk("write addr : 0x%x", addr);
+        printk("write value : 0x%x", write_value);
+        printk("write value : 0x%x", write_value);
+        mpu6050_write_byte(dev.client, addr, write_value);
+        return 0;
+    }
+
+}
 
 struct file_operations fops = {
     .open = dev_open,
@@ -157,12 +144,13 @@ dev_t dev_no ;
 
 static void mpu6050_init(struct i2c_client *client)
 {
-    mpu6050_write_byte(client, PWR_MGMT_1, 0x00);
-    mpu6050_write_byte(client, SMPLRT_DIV, 0x07);
-    mpu6050_write_byte(client, CONFIG, 0x06);
-    mpu6050_write_byte(client, GYRO_CONFIG, 0x18);
-    mpu6050_write_byte(client, ACCEL_CONFIG, 0x0);
+//    mpu6050_write_byte(client, PWR_MGMT_1, 0x00);
+//    mpu6050_write_byte(client, SMPLRT_DIV, 0x07);
+//    mpu6050_write_byte(client, CONFIG, 0x06);
+//    mpu6050_write_byte(client, GYRO_CONFIG, 0x18);
+//    mpu6050_write_byte(client, ACCEL_CONFIG, 0x0);
 }
+
 static int mpu6050_probe(struct i2c_client * client, const struct i2c_device_id * id)
 {
     dev.client = client;
@@ -209,6 +197,7 @@ struct i2c_driver mpu6050_driver = {
     },
     .id_table = mpu6050_dev_match,
 };
+
 module_i2c_driver(mpu6050_driver);
 MODULE_LICENSE("GPL");
 
